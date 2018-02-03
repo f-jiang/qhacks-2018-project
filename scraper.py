@@ -1,6 +1,7 @@
 import argparse
 import urllib.request
 import requests
+import json
 from bs4 import BeautifulSoup
 
 parser = argparse.ArgumentParser()
@@ -9,9 +10,10 @@ parser.add_argument('url', type=str, nargs='?', help='the list of urls in which 
 args = parser.parse_args()
 
 with urllib.request.urlopen(args.url) as response:
+    info = {'url': args.url, 'img_files': []}
     html = response.read()
     soup = BeautifulSoup(html, 'html.parser')
-    img_elems = soup.find_all('img')
+    img_elems = soup.find_all('img', 'lazy')
 
     # obtain all srcs from the html's img tags
     print('getting images from url {}'.format(args.url))
@@ -31,7 +33,8 @@ with urllib.request.urlopen(args.url) as response:
     # try to download the images from img_srcs
     i = 0
     for img_src in img_srcs:
-        with open('{}.jpg'.format(i), 'wb') as handle:
+        img_file_name = '{}.jpg'.format(i)
+        with open(img_file_name, 'wb') as handle:
             try:
                 response = requests.get(img_src, stream=True)
 
@@ -44,7 +47,11 @@ with urllib.request.urlopen(args.url) as response:
                         handle.write(block)
 
                     print('SUCCESS: downloaded image from src {}'.format(img_src))
+                    info['img_files'].append(img_file_name)
                     i += 1
             except:
                 print('ERROR: failed to download image from src {}'.format(img_src))
+
+    with open('info.json', 'w') as outfile:
+        json.dump(info, outfile, indent=4)
 
